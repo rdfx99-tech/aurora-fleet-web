@@ -127,17 +127,11 @@ def run_all_checks():
     print("✅ สแกนเสร็จสิ้น กลับเข้าสู่โหมดสลีป")
 
 # ==========================================
-# ⏰ ระบบตารางเวลา (Scheduler Engine)
+# ⏰ ระบบสั่งรัน 1 รอบ (สำหรับ GitHub Actions)
 # ==========================================
 if __name__ == "__main__":
     print("========================================")
-    print(" 🛰️ AuRORA SENTINEL BOT: ONLINE ")
+    print(" 🛰️ AuRORA SENTINEL BOT: GITHUB ACTIONS ONLINE ")
     print("========================================")
     
-    run_all_checks() # รันทันที 1 ครั้งตอนเริ่มระบบ
-    
-    schedule.every(6).hours.do(run_all_checks) # สั่งให้ตื่นมาเช็คทุก 6 ชั่วโมง
-    
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    run_all_checks() # รันแค่รอบเดียวแล้วจบการทำงานทันที

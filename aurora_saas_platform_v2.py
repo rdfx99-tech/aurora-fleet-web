@@ -435,8 +435,6 @@ elif st.session_state.role == "user":
                 # 📋 ตารางประวัติฉบับเต็ม
                 st.markdown("#### 📋 บันทึกการเดินทาง (Log Book)")
                 st.dataframe(df_history.style.background_gradient(cmap='viridis', subset=['Safety Score']), use_container_width=True)
-        
-        
        # 🚗 ฝังโค้ดแผนที่มิเตอร์วิ่งรถแบบ FULL OPTION (แผนที่สมบูรณ์ + Autocomplete + AI Filter + Multi-Stop)
         tracker_html = """
         <!DOCTYPE html>

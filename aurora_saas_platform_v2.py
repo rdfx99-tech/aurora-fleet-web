@@ -39,6 +39,20 @@ def init_db():
             CREATE TABLE IF NOT EXISTS api_keys (
                 api_key TEXT PRIMARY KEY, username TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, status TEXT
             )'''))
+        # 🌟 [เพิ่มใหม่] ตารางบันทึกประวัติการเดินทาง (30 Days History)
+        conn.execute(text('''
+            CREATE TABLE IF NOT EXISTS trip_history (
+                id SERIAL PRIMARY KEY, 
+                username TEXT, 
+                fleet_id TEXT, 
+                start_loc TEXT, 
+                dest_loc TEXT, 
+                distance_km FLOAT, 
+                fuel_cost FLOAT, 
+                max_speed FLOAT, 
+                safety_score INTEGER, 
+                trip_date DATE DEFAULT CURRENT_DATE
+            )'''))
         
         res = conn.execute(text("SELECT username FROM users WHERE username='P_S'")).fetchone()
         if not res:
@@ -87,6 +101,22 @@ def send_telegram_slip(username, slip_bytes):
     data = {'chat_id': TELEGRAM_CHAT_ID, 'caption': f"🚨 <b>แจ้งเตือนชำระเงิน!</b>\n👤 User: <code>{username}</code>\n💎 ร้องขออัปเกรดเป็น <b>VIP_USER_PRO</b>", 'parse_mode': 'HTML'}
     res = requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto", files={'photo': slip_bytes}, data=data)
     return res.status_code == 200
+def get_user_trip_history(username):
+    with engine.connect() as conn:
+        # ดึงข้อมูล 30 วันย้อนหลังของ User คนนั้นๆ
+        query = text("""
+            SELECT trip_date, fleet_id, start_loc, dest_loc, distance_km, fuel_cost, safety_score 
+            FROM trip_history 
+            WHERE username = :u AND trip_date >= CURRENT_DATE - INTERVAL '30 days'
+            ORDER BY trip_date DESC
+        """)
+        result = conn.execute(query, {"u": username}).fetchall()
+        
+        if result:
+            df = pd.DataFrame(result, columns=['Date', 'Fleet ID', 'Start', 'Destination', 'Distance (Km)', 'Fuel Cost (THB)', 'Safety Score'])
+            return df
+        else:
+            return pd.DataFrame()
 # ==========================================
 # 📡 2. DATA ENGINES (สำหรับระบบรถ Fleet)
 # ==========================================
@@ -345,19 +375,67 @@ elif st.session_state.role == "user":
             ACTIVE_TELE_CHAT_ID = st.session_state.get('tele_chat_id', '')
 
         # ==========================================
-        # 🗺️ นำหน้าจอ FLEET TRACKING (TAB 21) มาโชว์ให้ลูกค้าใช้งาน
+        # 🧭 QUANTUM FLEET COMMAND (SaaS Enterprise Edition)
         # ==========================================
         st.markdown("---")
-        st.markdown("### 🧭 QUANTUM FLEET COMMAND (ระบบติดตามและคำนวณเบิกจ่าย)")
+        st.markdown("### 🧭 QUANTUM FLEET COMMAND (ระบบติดตามและวิเคราะห์ประวัติ 30 วัน)")
         
-        st.markdown("#### 🌧️ เรดาร์ตรวจจับพายุและกลุ่มฝน (Live Weather Radar)")
-        st.markdown("""
-        <div style="border: 2px solid #00F0FF; border-radius: 12px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);">
-            <iframe width="100%" height="350" src="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=°C&metricWind=km/h&zoom=6&overlay=rain&product=ecmwf&level=surface&lat=13.75&lon=100.50" frameborder="0"></iframe>
-        </div>
-        """, unsafe_allow_html=True)
+        # 📊 แบ่งหน้าจอเป็นแท็บ Live และ History
+        tab_live, tab_history = st.tabs(["🔴 LIVE RADAR & TRACKING", "📊 ประวัติและสถิติย้อนหลัง (30 Days)"])
+        
+        with tab_live:
+            st.markdown("#### 🌧️ เรดาร์ตรวจจับพายุและกลุ่มฝน (Live Weather Radar)")
+            st.markdown(f"""
+            <div style="border: 2px solid #00F0FF; border-radius: 12px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);">
+                <iframe width="100%" height="350" src="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=°C&metricWind=km/h&zoom=6&overlay=rain&product=ecmwf&level=surface&lat=13.75&lon=100.50" frameborder="0"></iframe>
+            </div>
+            """, unsafe_allow_html=True)
 
-        st.markdown("#### 📍 มาตรวัดการเดินทางและพฤติกรรมคนขับ")
+            st.markdown("#### 📍 มาตรวัดการเดินทางและพฤติกรรมคนขับ")
+            
+            # --- ฝังโค้ดแผนที่มิเตอร์วิ่งรถ (tracker_html เดิมของพี่เอส) ---
+            # หมายเหตุ: ตรงนี้ให้ใช้ตัวแปร tracker_html เดิมที่พี่มีอยู่แล้วได้เลยครับ
+            components.html(tracker_html, height=1350)
+
+        with tab_history:
+            st.markdown("#### 📈 วิเคราะห์การเดินรถ 30 วันย้อนหลัง")
+            
+            df_history = get_user_trip_history(st.session_state.username)
+            
+            if df_history.empty:
+                st.info("📭 ยังไม่มีประวัติการเดินทางในระบบ (ข้อมูลจะแสดงเมื่อบันทึกทริปแรกสำเร็จ)")
+                
+                # 🛠️ ปุ่มทดสอบสร้างข้อมูล (Test Data)
+                if st.button("🧪 จำลองข้อมูลประวัติ (Demo Mode)"):
+                    with engine.connect() as conn:
+                        for i in range(7):
+                            fake_date = datetime.date.today() - datetime.timedelta(days=i*3)
+                            conn.execute(text("""
+                                INSERT INTO trip_history (username, fleet_id, start_loc, dest_loc, distance_km, fuel_cost, max_speed, safety_score, trip_date)
+                                VALUES (:u, :f, 'Bangkok', 'Chonburi', :d, :c, 110, 95, :date)
+                            """), {"u": st.session_state.username, "f": f"CAR-0{i%2+1}", "d": 90.5 + i, "c": 350.0 + (i*15), "date": fake_date})
+                        conn.commit()
+                    st.rerun()
+            else:
+                # 🏆 แผงสถิติรวม (KPI Cards)
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("🛣️ ระยะทางสะสม", f"{df_history['Distance (Km)'].sum():,.2f} Km")
+                c2.metric("⛽ ค่าน้ำมันรวม", f"{df_history['Fuel Cost (THB)'].sum():,.2f} ฿")
+                c3.metric("📦 จำนวนทริป", f"{len(df_history)} ทริป")
+                c4.metric("🛡️ Safety Avg", f"{df_history['Safety Score'].mean():.0f}%")
+                
+                # 📊 กราฟแท่งแสดงค่าน้ำมันรายวัน
+                daily_stats = df_history.groupby('Date')['Fuel Cost (THB)'].sum().reset_index()
+                fig_cost = go.Figure(data=[go.Bar(x=daily_stats['Date'], y=daily_stats['Fuel Cost (THB)'], marker_color='#00F0FF')])
+                fig_cost.update_layout(title="ภาพรวมรายจ่ายน้ำมัน (30 วัน)", template="plotly_dark", 
+                                     xaxis_title="วันที่", yaxis_title="บาท (THB)", 
+                                     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_cost, use_container_width=True)
+                
+                # 📋 ตารางประวัติฉบับเต็ม
+                st.markdown("#### 📋 บันทึกการเดินทาง (Log Book)")
+                st.dataframe(df_history.style.background_gradient(cmap='viridis', subset=['Safety Score']), use_container_width=True)
+        
         
        # 🚗 ฝังโค้ดแผนที่มิเตอร์วิ่งรถแบบ FULL OPTION (แผนที่สมบูรณ์ + Autocomplete + AI Filter + Multi-Stop)
         tracker_html = """

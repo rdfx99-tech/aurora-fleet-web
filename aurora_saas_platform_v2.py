@@ -39,7 +39,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS api_keys (
                 api_key TEXT PRIMARY KEY, username TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, status TEXT
             )'''))
-        # 🌟 [เพิ่มใหม่] ตารางบันทึกประวัติการเดินทาง (30 Days History)
+        # (เพิ่มต่อท้ายตาราง api_keys)
         conn.execute(text('''
             CREATE TABLE IF NOT EXISTS trip_history (
                 id SERIAL PRIMARY KEY, 
@@ -53,7 +53,6 @@ def init_db():
                 safety_score INTEGER, 
                 trip_date DATE DEFAULT CURRENT_DATE
             )'''))
-        
         res = conn.execute(text("SELECT username FROM users WHERE username='P_S'")).fetchone()
         if not res:
             # ✅ ใช้ตัวแปรส่วนกลางที่ดึงมาจาก Render (ปลอดภัย ไร้รอยรั่ว)
@@ -391,8 +390,8 @@ elif st.session_state.role == "user":
             </div>
             """, unsafe_allow_html=True)
 
-            st.markdown("#### 📍 มาตรวัดการเดินทางและพฤติกรรมคนขับ")
-                      
+            st.markdown("#### 📍 มาตรวัดการเดินทางและพฤติกรรมคนขับ")           
+          
        # 🚗 ฝังโค้ดแผนที่มิเตอร์วิ่งรถแบบ FULL OPTION (แผนที่สมบูรณ์ + Autocomplete + AI Filter + Multi-Stop)
         tracker_html = """
         <!DOCTYPE html>
@@ -940,8 +939,8 @@ elif st.session_state.role == "user":
         """.replace("DYNAMIC_TELE_TOKEN", ACTIVE_TELE_TOKEN).replace("DYNAMIC_TELE_CHAT_ID", ACTIVE_TELE_CHAT_ID)
         
         components.html(tracker_html, height=1350)
-    
-      with tab_history:
+
+    with tab_history:
             st.markdown("#### 📈 วิเคราะห์การเดินรถ 30 วันย้อนหลัง")
             
             df_history = get_user_trip_history(st.session_state.username)
@@ -979,6 +978,7 @@ elif st.session_state.role == "user":
                 # 📋 ตารางประวัติฉบับเต็ม
                 st.markdown("#### 📋 บันทึกการเดินทาง (Log Book)")
                 st.dataframe(df_history.style.background_gradient(cmap='viridis', subset=['Safety Score']), use_container_width=True)
+        
 
     else:
         st.error("⛔ บัญชีของคุณหมดอายุการใช้งานแล้ว กรุณาอัปเกรดเพื่อใช้งานต่อ")

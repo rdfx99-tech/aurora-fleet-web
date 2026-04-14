@@ -202,6 +202,10 @@ if not st.session_state.logged_in:
 
 # --- หน้าจอ USER ---
 elif st.session_state.role == "user":
+    # 🛡️ ระบบป้องกัน Session Error: ถ้าข้อมูลมาไม่ครบ ให้เตะกลับไปหน้า Login ใหม่
+    if "expire_date" not in st.session_state:
+        st.session_state.logged_in = False
+        st.rerun()
     days_left = (st.session_state.expire_date - datetime.date.today()).days
     
     st.sidebar.markdown(f"👤 **{st.session_state.username}**")

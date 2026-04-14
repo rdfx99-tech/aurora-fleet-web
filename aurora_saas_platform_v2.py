@@ -174,7 +174,13 @@ if not st.session_state.logged_in:
                     st.session_state.logged_in = True
                     st.session_state.username = log_user
                     st.session_state.role = user_data[0]
-                    st.session_state.expire_date = datetime.datetime.strptime(user_data[1], "%Y-%m-%d").date()
+                    # 🌟 รองรับทั้งข้อมูลแบบ String (ตอนสมัครใหม่) และ Date (ตอนดึงจาก PostgreSQL)
+                    if isinstance(user_data[1], str):
+                        st.session_state.expire_date = datetime.datetime.strptime(user_data[1], "%Y-%m-%d").date()
+                    elif hasattr(user_data[1], 'date'):
+                        st.session_state.expire_date = user_data[1].date()
+                    else:
+                        st.session_state.expire_date = user_data[1]
                     st.session_state.tier = user_data[2]
                     
                     # เก็บข้อมูล Telegram ของลูกค้าลง Session

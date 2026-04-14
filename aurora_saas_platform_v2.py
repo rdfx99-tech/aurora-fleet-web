@@ -392,49 +392,7 @@ elif st.session_state.role == "user":
             """, unsafe_allow_html=True)
 
             st.markdown("#### 📍 มาตรวัดการเดินทางและพฤติกรรมคนขับ")
-            
-            # --- ฝังโค้ดแผนที่มิเตอร์วิ่งรถ (tracker_html เดิมของพี่เอส) ---
-            # หมายเหตุ: ตรงนี้ให้ใช้ตัวแปร tracker_html เดิมที่พี่มีอยู่แล้วได้เลยครับ
-            components.html(tracker_html, height=1350)
-
-        with tab_history:
-            st.markdown("#### 📈 วิเคราะห์การเดินรถ 30 วันย้อนหลัง")
-            
-            df_history = get_user_trip_history(st.session_state.username)
-            
-            if df_history.empty:
-                st.info("📭 ยังไม่มีประวัติการเดินทางในระบบ (ข้อมูลจะแสดงเมื่อบันทึกทริปแรกสำเร็จ)")
-                
-                # 🛠️ ปุ่มทดสอบสร้างข้อมูล (Test Data)
-                if st.button("🧪 จำลองข้อมูลประวัติ (Demo Mode)"):
-                    with engine.connect() as conn:
-                        for i in range(7):
-                            fake_date = datetime.date.today() - datetime.timedelta(days=i*3)
-                            conn.execute(text("""
-                                INSERT INTO trip_history (username, fleet_id, start_loc, dest_loc, distance_km, fuel_cost, max_speed, safety_score, trip_date)
-                                VALUES (:u, :f, 'Bangkok', 'Chonburi', :d, :c, 110, 95, :date)
-                            """), {"u": st.session_state.username, "f": f"CAR-0{i%2+1}", "d": 90.5 + i, "c": 350.0 + (i*15), "date": fake_date})
-                        conn.commit()
-                    st.rerun()
-            else:
-                # 🏆 แผงสถิติรวม (KPI Cards)
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("🛣️ ระยะทางสะสม", f"{df_history['Distance (Km)'].sum():,.2f} Km")
-                c2.metric("⛽ ค่าน้ำมันรวม", f"{df_history['Fuel Cost (THB)'].sum():,.2f} ฿")
-                c3.metric("📦 จำนวนทริป", f"{len(df_history)} ทริป")
-                c4.metric("🛡️ Safety Avg", f"{df_history['Safety Score'].mean():.0f}%")
-                
-                # 📊 กราฟแท่งแสดงค่าน้ำมันรายวัน
-                daily_stats = df_history.groupby('Date')['Fuel Cost (THB)'].sum().reset_index()
-                fig_cost = go.Figure(data=[go.Bar(x=daily_stats['Date'], y=daily_stats['Fuel Cost (THB)'], marker_color='#00F0FF')])
-                fig_cost.update_layout(title="ภาพรวมรายจ่ายน้ำมัน (30 วัน)", template="plotly_dark", 
-                                     xaxis_title="วันที่", yaxis_title="บาท (THB)", 
-                                     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(fig_cost, use_container_width=True)
-                
-                # 📋 ตารางประวัติฉบับเต็ม
-                st.markdown("#### 📋 บันทึกการเดินทาง (Log Book)")
-                st.dataframe(df_history.style.background_gradient(cmap='viridis', subset=['Safety Score']), use_container_width=True)
+                      
        # 🚗 ฝังโค้ดแผนที่มิเตอร์วิ่งรถแบบ FULL OPTION (แผนที่สมบูรณ์ + Autocomplete + AI Filter + Multi-Stop)
         tracker_html = """
         <!DOCTYPE html>
@@ -982,6 +940,45 @@ elif st.session_state.role == "user":
         """.replace("DYNAMIC_TELE_TOKEN", ACTIVE_TELE_TOKEN).replace("DYNAMIC_TELE_CHAT_ID", ACTIVE_TELE_CHAT_ID)
         
         components.html(tracker_html, height=1350)
+    
+      with tab_history:
+            st.markdown("#### 📈 วิเคราะห์การเดินรถ 30 วันย้อนหลัง")
+            
+            df_history = get_user_trip_history(st.session_state.username)
+            
+            if df_history.empty:
+                st.info("📭 ยังไม่มีประวัติการเดินทางในระบบ (ข้อมูลจะแสดงเมื่อบันทึกทริปแรกสำเร็จ)")
+                
+                # 🛠️ ปุ่มทดสอบสร้างข้อมูล (Test Data)
+                if st.button("🧪 จำลองข้อมูลประวัติ (Demo Mode)"):
+                    with engine.connect() as conn:
+                        for i in range(7):
+                            fake_date = datetime.date.today() - datetime.timedelta(days=i*3)
+                            conn.execute(text("""
+                                INSERT INTO trip_history (username, fleet_id, start_loc, dest_loc, distance_km, fuel_cost, max_speed, safety_score, trip_date)
+                                VALUES (:u, :f, 'Bangkok', 'Chonburi', :d, :c, 110, 95, :date)
+                            """), {"u": st.session_state.username, "f": f"CAR-0{i%2+1}", "d": 90.5 + i, "c": 350.0 + (i*15), "date": fake_date})
+                        conn.commit()
+                    st.rerun()
+            else:
+                # 🏆 แผงสถิติรวม (KPI Cards)
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("🛣️ ระยะทางสะสม", f"{df_history['Distance (Km)'].sum():,.2f} Km")
+                c2.metric("⛽ ค่าน้ำมันรวม", f"{df_history['Fuel Cost (THB)'].sum():,.2f} ฿")
+                c3.metric("📦 จำนวนทริป", f"{len(df_history)} ทริป")
+                c4.metric("🛡️ Safety Avg", f"{df_history['Safety Score'].mean():.0f}%")
+                
+                # 📊 กราฟแท่งแสดงค่าน้ำมันรายวัน
+                daily_stats = df_history.groupby('Date')['Fuel Cost (THB)'].sum().reset_index()
+                fig_cost = go.Figure(data=[go.Bar(x=daily_stats['Date'], y=daily_stats['Fuel Cost (THB)'], marker_color='#00F0FF')])
+                fig_cost.update_layout(title="ภาพรวมรายจ่ายน้ำมัน (30 วัน)", template="plotly_dark", 
+                                     xaxis_title="วันที่", yaxis_title="บาท (THB)", 
+                                     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_cost, use_container_width=True)
+                
+                # 📋 ตารางประวัติฉบับเต็ม
+                st.markdown("#### 📋 บันทึกการเดินทาง (Log Book)")
+                st.dataframe(df_history.style.background_gradient(cmap='viridis', subset=['Safety Score']), use_container_width=True)
 
     else:
         st.error("⛔ บัญชีของคุณหมดอายุการใช้งานแล้ว กรุณาอัปเกรดเพื่อใช้งานต่อ")

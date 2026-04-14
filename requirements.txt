@@ -7,3 +7,4 @@ streamlit-autorefresh
 google-genai
 pillow
 requests
+matplotlib

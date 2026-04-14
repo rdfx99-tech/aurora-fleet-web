@@ -8,3 +8,4 @@ google-genai
 pillow
 requests
 matplotlib
+schedule

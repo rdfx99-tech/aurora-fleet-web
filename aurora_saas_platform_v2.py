@@ -938,9 +938,11 @@ elif st.session_state.role == "user":
         </html>
         """.replace("DYNAMIC_TELE_TOKEN", ACTIVE_TELE_TOKEN).replace("DYNAMIC_TELE_CHAT_ID", ACTIVE_TELE_CHAT_ID)
         
+        # ... (Inside tab_live code)
         components.html(tracker_html, height=1350)
 
-    with tab_history:
+        # 🛠️ FIX: Indent to 8 spaces to stay inside the `if days_left > 0:` block
+        with tab_history:
             st.markdown("#### 📈 วิเคราะห์การเดินรถ 30 วันย้อนหลัง")
             
             df_history = get_user_trip_history(st.session_state.username)
@@ -978,8 +980,9 @@ elif st.session_state.role == "user":
                 # 📋 ตารางประวัติฉบับเต็ม
                 st.markdown("#### 📋 บันทึกการเดินทาง (Log Book)")
                 st.dataframe(df_history.style.background_gradient(cmap='viridis', subset=['Safety Score']), use_container_width=True)
-        
+    
 
+    # ✅ Now this else correctly links back to `if days_left > 0:`
     else:
         st.error("⛔ บัญชีของคุณหมดอายุการใช้งานแล้ว กรุณาอัปเกรดเพื่อใช้งานต่อ")
 
